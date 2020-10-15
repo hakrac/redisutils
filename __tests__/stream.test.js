@@ -10,6 +10,7 @@ mystream.on('bye', item => {
     console.log(item.message)
 })
 
+console.log(mystream.connected)
 
 mystream.add({
     channel: 'hello',

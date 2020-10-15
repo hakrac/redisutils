@@ -75,6 +75,10 @@ class RedisStream extends EventEmitter {
         this._readClient.xreadgroup(GROUP, this.group, this.consumer, BLOCK, 0, NOACK, STREAMS, ...this.streams, '>', onReceive)
     }
 
+    get connected() {
+        return this._readClient.connected
+    }
+
     ack(id, stream) {
         if(!stream) {
             stream = this.streams[0]
@@ -95,6 +99,4 @@ class RedisStream extends EventEmitter {
 
 }
 
-module.exports = {
-    RedisStream
-}
+module.exports = RedisStream
