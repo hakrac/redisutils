@@ -26,7 +26,9 @@ const parseStreams = (streamsData) => {
 const serializeItem = (item) => {
     let result = []
     for(let key of Object.keys(item)) {
-        result.push(key, item[key])
+        if(typeof item[key] !== 'undefined') {
+            result.push(key, item[key].toString())
+        }
     }
     return result
 }
