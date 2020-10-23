@@ -1,5 +1,9 @@
 const RedisStream = require('./stream')
+const RedisStore = require('./store')
+const RedisPubSub = require('./pubsub')
 
 module.exports = {
-    RedisStream
+    RedisStream,
+    RedisStore,
+    RedisPubSub
 }

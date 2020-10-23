@@ -10,6 +10,10 @@ declare class RedisPubSub extends EventEmitter {
         redisUrl: string
     )
 
+    emit(
+        event: string,
+        message: string
+    )
 }
 
 export = RedisStream
