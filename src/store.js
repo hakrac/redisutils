@@ -14,8 +14,8 @@ const serializeItem = item => {
 
 class RedisStore  {
 
-    constructor(redisUrl) {
-        this._client = redis.createClient(redisUrl)
+    constructor({client, redisUrl}) {
+        this._client = client || redis.createClient(redisUrl)
     }
 
     async get(key) {

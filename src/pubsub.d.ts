@@ -3,12 +3,15 @@
 import {RedisClient} from 'redis'
 import {EventEmitter} from 'events'
 
+interface RedisPubSubClientOptions {
+    publisherClient?: RedisClient,
+    subscriberClient?: RedisClient,
+    redisUrl?: string
+}
 
 declare class RedisPubSub extends EventEmitter {
 
-    constructor(
-        redisUrl: string
-    )
+    constructor(RedisPubSubClientOptions?)
 
     emit(
         event: string,

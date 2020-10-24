@@ -4,10 +4,10 @@ const { promisify } = require('util')
 
 class RedisPubSub extends EventEmitter {
     
-    constructor(redisUrl) {
+    constructor({publisherClient, subscriberClient, redisUrl}) {
         super()
-        this.subscriber = redis.createClient(redisUrl)
-        this.publisher = redis.createClient(redisUrl)
+        this.subscriber = subscriberClient || redis.createClient(redisUrl)
+        this.publisher = publisherClient || redis.createClient(redisUrl)
         this.emitter = new EventEmitter()
 
         this.subscriber.on('message', (channel, message) => {

@@ -42,14 +42,14 @@ const STREAMS = "STREAMS"
 
 class RedisStream extends EventEmitter {
 
-    constructor(names, group, consumer, eventKey, readClient, writeClient) {
+    constructor(names, group, consumer, eventKey, {readClient, writeClient, redisUrl}) {
         super()
         this.streams = names
         this.group = group
         this.consumer = consumer
         this.eventKey = eventKey
-        this._readClient = readClient || redis.createClient()
-        this._writeClient = writeClient || redis.createClient()
+        this._readClient = readClient || redis.createClient(redisUrl)
+        this._writeClient = writeClient || redis.createClient(redisUrl)
 
         this.streams.forEach(async stream => {
             await promisify(
