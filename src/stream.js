@@ -8,7 +8,7 @@ const parseItem = (itemData) => {
         [
             [
                 id, 
-                [_, type, ...values]
+                [$1, type, $2, payload]
             ]
         ]
     ] = itemData
@@ -17,12 +17,12 @@ const parseItem = (itemData) => {
         stream: streamname,
         id,
         type,
-        payload: {}
+        payload: JSON.parse(payload)
     }
 
-    for(let i = 0; i < (values.length - 1); i += 2) {
-        item.payload[values[i]] = values[i + 1]
-    }
+    // for(let i = 0; i < (values.length - 1); i += 2) {
+    //     item.payload[values[i]] = values[i + 1]
+    // }
     return item
 }
 
@@ -36,11 +36,12 @@ const parseStreams = (streamsData) => {
 
 const serializeItem = (item) => {
     let result = ["type", item.type]
-    for(let key of Object.keys(item.payload)) {
-        if(typeof item.payload[key] !== 'undefined') {
-            result.push(key, item.payload[key].toString())
-        }
-    }
+    // for(let key of Object.keys(item.payload)) {
+    //     if(typeof item.payload[key] !== 'undefined') {
+    //         result.push(key, item.payload[key].toString())
+    //     }
+    // }
+    result.push("payload", JSON.stringify(item.payload))
     return result
 }
 
