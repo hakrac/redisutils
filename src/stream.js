@@ -3,14 +3,25 @@ const {EventEmitter} = require('events')
 const { promisify } = require('util')
 
 const parseItem = (itemData) => {
-    let [streamname, [[id, values]]] = itemData
+    let [
+        streamname, 
+        [
+            [
+                id, 
+                [_, type, ...values]
+            ]
+        ]
+    ] = itemData
+
     let item = {
         stream: streamname,
         id,
-        data: {}
+        type,
+        payload: {}
     }
+
     for(let i = 0; i < (values.length - 1); i += 2) {
-        item.data[values[i]] = values[i + 1]
+        item.payload[values[i]] = values[i + 1]
     }
     return item
 }
@@ -24,10 +35,10 @@ const parseStreams = (streamsData) => {
 }
 
 const serializeItem = (item) => {
-    let result = []
-    for(let key of Object.keys(item)) {
-        if(typeof item[key] !== 'undefined') {
-            result.push(key, item[key].toString())
+    let result = ["type", item.type]
+    for(let key of Object.keys(item.payload)) {
+        if(typeof item.payload[key] !== 'undefined') {
+            result.push(key, item.payload[key].toString())
         }
     }
     return result
@@ -42,63 +53,68 @@ const STREAMS = "STREAMS"
 
 class RedisStream extends EventEmitter {
 
-    constructor(names, group, consumer, eventKey, readClient, writeClient) {
+    constructor(name, group, consumer, {redisUrl}) {
         super()
-        this.streams = names
+        this.stream = name
         this.group = group
         this.consumer = consumer
-        this.eventKey = eventKey
-        this._readClient = readClient || redis.createClient()
-        this._writeClient = writeClient || redis.createClient()
+        this.eventKey = "type"
+        this._readClient = redis.createClient(redisUrl)
+        this._writeClient = redis.createClient(redisUrl)
+        this.eventEmitter = new EventEmitter()
 
-        this.streams.forEach(async stream => {
-            // TODO handle rejections gracefully
-            await promisify(
-                cb => this._writeClient.xgroup(CREATE, stream, this.group, '$', MKSTREAM, cb)
-            )().catch(() => {})
-        })
+        
+        // @ts-ignore
+        this._writeClient.xgroup(CREATE, this.stream, this.group, '$', MKSTREAM, () => {
 
-        let onReceive = (err, value) => {
-            if(err) {
-                // error
-            } else {
-                let items = parseStreams(value)
-                for(let item of items) {
-                    let event = item.data[this.eventKey]
-                    if(typeof event === "string") {
-                        this.emit(event, item)
-                    } else {
-                        this.emit("data", item)
+            let onReceive = (err, value) => {
+                if(err) {
+                    // error
+                } else {
+                    let items = parseStreams(value)
+                    for(let item of items) {
+                        let event = item[this.eventKey]
+                        if(typeof event === "string") {
+                            this.eventEmitter.emit(event, item.payload)
+                        } else {
+                            this.eventEmitter.emit("data", item)
+                        }
+                        this.ack(item.id)
                     }
-                    this.ack(item.id, item.stream)
                 }
+                // @ts-ignore
+                this._readClient.xreadgroup(GROUP, this.group, this.consumer, BLOCK, 0, NOACK, STREAMS, this.stream, '>', onReceive)
             }
-            this._readClient.xreadgroup(GROUP, this.group, this.consumer, BLOCK, 0, NOACK, STREAMS, ...this.streams, '>', onReceive)
-        }
-
-        this._readClient.xreadgroup(GROUP, this.group, this.consumer, BLOCK, 0, NOACK, STREAMS, ...this.streams, '>', onReceive)
+    
+            // @ts-ignore
+            this._readClient.xreadgroup(GROUP, this.group, this.consumer, BLOCK, 0, NOACK, STREAMS, this.stream, '>', onReceive)
+        
+        })
     }
 
     get connected() {
         return this._readClient.connected
     }
 
-    ack(id, stream) {
-        if(!stream) {
-            stream = this.streams[0]
-        }
+    ack(id) {
         return promisify(
-            cb => this._writeClient.xack(GROUP, this.group, stream, id, cb)
+            // @ts-ignore
+            cb => this._writeClient.xack(GROUP, this.group, this.stream, id, cb)
         )()
     }
 
-    add(item, stream) {
-        if(!stream) {
-            stream = this.streams[0]
-        }
-        return promisify(
-            cb => this._writeClient.xadd(stream, '*', ...serializeItem(item), cb)
+    on(event, cb) {
+        this.eventEmitter.on(event, cb)
+        return this
+    }
+
+    emit(event, item) {
+        promisify(
+            // @ts-ignore
+            cb => this._writeClient.xadd(this.stream, '*', ...serializeItem({type: event, payload: item}), cb)
         )()
+
+        return true
     }
 
 }

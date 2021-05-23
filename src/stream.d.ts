@@ -5,18 +5,15 @@ import {EventEmitter} from 'events'
 
 
 interface RedisStreamClientOptions {
-    readClient?: RedisClient, 
-    writeClient?: RedisClient,
     redisUrl?: string
 }
 
 declare class RedisStream extends EventEmitter {
 
     constructor(
-        names: string[], 
+        name: string, 
         group: string, 
         consumer: string,
-        eventKey: string,
         clientOptions?: RedisStreamClientOptions
     )
 
