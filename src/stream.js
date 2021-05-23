@@ -42,19 +42,20 @@ const STREAMS = "STREAMS"
 
 class RedisStream extends EventEmitter {
 
-    constructor(names, group, consumer, eventKey, {readClient, writeClient, redisUrl}) {
+    constructor(names, group, consumer, eventKey, readClient, writeClient) {
         super()
         this.streams = names
         this.group = group
         this.consumer = consumer
         this.eventKey = eventKey
-        this._readClient = readClient || redis.createClient(redisUrl)
-        this._writeClient = writeClient || redis.createClient(redisUrl)
+        this._readClient = readClient || redis.createClient()
+        this._writeClient = writeClient || redis.createClient()
 
         this.streams.forEach(async stream => {
+            // TODO handle rejections gracefully
             await promisify(
                 cb => this._writeClient.xgroup(CREATE, stream, this.group, '$', MKSTREAM, cb)
-            )()
+            )().catch(() => {})
         })
 
         let onReceive = (err, value) => {
@@ -65,10 +66,11 @@ class RedisStream extends EventEmitter {
                 for(let item of items) {
                     let event = item.data[this.eventKey]
                     if(typeof event === "string") {
-                        this.emit(event, item.data)
+                        this.emit(event, item)
                     } else {
-                        this.emit("data", item.data)
+                        this.emit("data", item)
                     }
+                    this.ack(item.id, item.stream)
                 }
             }
             this._readClient.xreadgroup(GROUP, this.group, this.consumer, BLOCK, 0, NOACK, STREAMS, ...this.streams, '>', onReceive)

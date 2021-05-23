@@ -12,7 +12,7 @@ const serializeItem = item => {
 }
 
 
-class RedisStore  {
+class RedisStore {
 
     constructor({client, redisUrl}) {
         this._client = client || redis.createClient(redisUrl)
